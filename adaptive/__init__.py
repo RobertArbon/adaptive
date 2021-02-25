@@ -4,7 +4,7 @@ A package for prototyping adaptive sampling policies for molecular kinetics
 """
 
 # Add imports here
-from .environment import *
+from .dynamics import *
 
 # Handle versioneer
 from ._version import get_versions
