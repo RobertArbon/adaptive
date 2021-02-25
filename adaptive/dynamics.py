@@ -24,3 +24,6 @@ class Dynamics(object):
         return trajs
 
 
+def single_matrix_cover(n_epochs: int, dynamics: Dynamics):
+    for i in range(n_epochs):
+        pass
