@@ -1,3 +1,4 @@
+# type: ignore
 
 # This file helps to compute a version number in source trees obtained from
 # git-archive tarball (such as those provided by githubs download-from-tag
@@ -15,6 +16,7 @@ import os
 import re
 import subprocess
 import sys
+from typing import Union, Dict
 
 
 def get_keywords():
@@ -474,7 +476,8 @@ def render(pieces, style):
             "date": pieces.get("date")}
 
 
-def get_versions():
+def get_versions() -> Dict[str, Union[str, None]]:
+
     """Get version information or return default if unable to do so."""
     # I am in _version.py, which lives at ROOT/VERSIONFILE_SOURCE. If we have
     # __file__, we can work backwards from there to the root. Some
