@@ -8,6 +8,7 @@ import pytest
 import sys
 import numpy as np
 
+
 @pytest.fixture
 def create_dynamics_engine():
     P = np.array([[0.5, 0.5], [0.5, 0.5]])
@@ -17,8 +18,8 @@ def create_dynamics_engine():
 
 def test_dynamics_returns_good_arrays(create_dynamics_engine):
     mm = create_dynamics_engine
-    starting_states = [0, 1]
-    traj_lengths = [10, 11]
+    starting_states = np.array([0, 1])
+    traj_lengths = np.array([10, 11])
     trajs = mm.sample(starting_states, traj_lengths)
     traj_lengths_correct = np.allclose(traj_lengths, [x.shape[0] for x in trajs])
     start_states_correct = np.allclose(starting_states, [x[0] for x in trajs])
@@ -27,24 +28,24 @@ def test_dynamics_returns_good_arrays(create_dynamics_engine):
 
 def test_dynamics_bad_start_states(create_dynamics_engine):
     mm = create_dynamics_engine
-    starting_states = [3, 1]
-    traj_lengths = [10, 10]
+    starting_states = np.array([3, 1])
+    traj_lengths = np.array([10, 10])
     with pytest.raises(ValueError):
         _ = mm.sample(starting_states, traj_lengths)
 
 
 def test_dynamics_bad_lengths(create_dynamics_engine):
     mm = create_dynamics_engine
-    starting_states = [0, 1]
-    traj_lengths = [10, -1]
+    starting_states = np.array([0, 1])
+    traj_lengths = np.array([10, -1])
     with pytest.raises(ValueError):
         _ = mm.sample(starting_states, traj_lengths)
 
 
 def test_dynamics_inconsistent_init(create_dynamics_engine):
     mm = create_dynamics_engine
-    starting_states = [0, 1, 1]
-    traj_lengths = [10, 10]
+    starting_states = np.array([0, 1, 1])
+    traj_lengths = np.array([10, 10])
     with pytest.raises(ValueError):
         _ = mm.sample(starting_states, traj_lengths)
 
