@@ -40,3 +40,10 @@ def test_coverage(cov_trajs):
     num_states = np.unique(trajs[0]).shape[0]
     cov_trajs.add_trajectories(trajs)
     assert cov_trajs.num_covered_states == num_states
+
+
+def test_num_epochs(cov_trajs):
+    multi_trajs = [[np.array([1])], [np.array([2])]]
+    for traj in multi_trajs:
+        cov_trajs.add_trajectories(traj)
+    assert cov_trajs.num_epochs == 2

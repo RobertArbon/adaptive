@@ -27,7 +27,9 @@ class Dynamics(object):
 
 
 class CoverTrajectories:
-
+    """
+    Container of trajectories used to calculate cover time
+    """
     def __init__(self) -> None:
         self._trajectories: List[List[np.ndarray]] = []
         self._covered_states: Set[int] = set()
@@ -49,10 +51,34 @@ class CoverTrajectories:
     def trajectories(self) -> List[List[np.array]]:
         return self._trajectories
 
+    @property
+    def num_epochs(self) -> int:
+        return len(self._trajectories)
 
-def time_to_cover(cov_traj: CoverTrajectories, n_states: int) -> int:
-    pass
 
+class CoverTime:
+    """
+    Calculates cover time and associated statistics.
+    """
+    def __init__(self, trajectories: CoverTrajectories) -> None:
+        self.trajectories = trajectories
+        self.n_epochs = trajectories.num_epochs
+        self._states_per_epoch: List[Set[int]] = []
+        self._n_steps_per_epoch: List[int] = []
+
+    @property
+    def states_per_epoch(self):
+        for i in range(self.n_epochs):
+            trajs = np.concatenate(self.trajectories.trajectories[i])
+            self._states_per_epoch.append(set(trajs))
+        return self._states_per_epoch
+
+    @property
+    def steps_per_epoch(self):
+        for i in range(self.n_epochs):
+            trajs = np.concatenate(self.trajectories.trajectories[i])
+            self._n_steps_per_epoch.append(trajs.shape[0])
+        return self._n_steps_per_epoch
 
 
 def single_matrix_cover(dynamics: Dynamics, policy: Callable, max_epochs: Optional[int]=int(1e3)) -> CoverTrajectories:
