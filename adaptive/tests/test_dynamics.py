@@ -3,10 +3,10 @@ Unit and regression test for the adaptive package.
 """
 
 # Import package, test suite, and other packages as needed
-import adaptive as ad
-import pytest
-import sys
 import numpy as np
+import pytest
+
+import adaptive as ad
 
 
 @pytest.fixture
