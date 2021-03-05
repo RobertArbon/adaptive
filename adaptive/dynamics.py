@@ -39,7 +39,7 @@ class CoverTrajectories:
         for x in unique_new_states:
             self._covered_states.add(x)
 
-    def add_trajectories(self, new_trajs: List[np.ndarray]) -> None:
+    def add(self, new_trajs: List[np.ndarray]) -> None:
         self._trajectories.append(new_trajs)
         self._update_state_coverage(new_trajs)
 
@@ -62,23 +62,44 @@ class CoverTime:
     """
     def __init__(self, trajectories: CoverTrajectories) -> None:
         self.trajectories = trajectories
-        self.n_epochs = trajectories.num_epochs
-        self._states_per_epoch: List[Set[int]] = []
-        self._n_steps_per_epoch: List[int] = []
+        self.n_epochs: int = trajectories.num_epochs
+        self._n_states_per_epoch: np.ndarray = np.empty(self.n_epochs)
+        self._n_steps_per_epoch: np.ndarray = np.empty(self.n_epochs)
+        self._walker_time_per_epoch: np.ndarray = np.empty(self.n_epochs)
+        self._calculate_per_epoch_stats()
+
+    @staticmethod
+    def _n_states(states: np.array) -> int:
+        return len(set(states))
+
+    @staticmethod
+    def _n_steps(states: np.array) -> int:
+        return len(states)
+
+    @staticmethod
+    def _max_walker_time(trajs: List[np.ndarray]) -> int:
+        return int(np.max([t.shape[0] for t in trajs]))
+
+    def _calculate_per_epoch_stats(self) -> None:
+        for i in range(self.n_epochs):
+            trajs = self.trajectories.trajectories[i]
+            all_states = np.concatenate(trajs)
+
+            self._walker_time_per_epoch[i] = self._max_walker_time(trajs)
+            self._n_states_per_epoch[i] = self._n_states(all_states)
+            self._n_steps_per_epoch[i] = self._n_steps(all_states)
 
     @property
-    def states_per_epoch(self):
-        for i in range(self.n_epochs):
-            trajs = np.concatenate(self.trajectories.trajectories[i])
-            self._states_per_epoch.append(set(trajs))
-        return self._states_per_epoch
+    def n_states_per_epoch(self) -> np.ndarray:
+        return self._n_states_per_epoch
 
     @property
-    def steps_per_epoch(self):
-        for i in range(self.n_epochs):
-            trajs = np.concatenate(self.trajectories.trajectories[i])
-            self._n_steps_per_epoch.append(trajs.shape[0])
+    def n_steps_per_epoch(self) -> np.ndarray:
         return self._n_steps_per_epoch
+
+    @property
+    def walker_time_per_epoch(self) -> np.ndarray:
+        return self._walker_time_per_epoch
 
 
 def single_matrix_cover(dynamics: Dynamics, policy: Callable, max_epochs: Optional[int]=int(1e3)) -> CoverTrajectories:
@@ -86,6 +107,6 @@ def single_matrix_cover(dynamics: Dynamics, policy: Callable, max_epochs: Option
     for i in range(max_epochs):
         config = policy(trajectories)
         new_trajectories = dynamics.sample(config)
-        trajectories.add_trajectories(new_trajectories)
+        trajectories.add(new_trajectories)
         if trajectories.num_covered_states == dynamics.n_states:
             return trajectories

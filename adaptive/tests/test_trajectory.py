@@ -19,14 +19,14 @@ def trajs_are_identical(a: List[np.ndarray], b: List[np.ndarray]):
 
 def test_append_trajectory(cov_trajs):
     trajs = [np.array([1])]
-    cov_trajs.add_trajectories(new_trajs=trajs)
+    cov_trajs.add(new_trajs=trajs)
     assert trajs_are_identical(cov_trajs.trajectories[0], trajs)
 
 
 def test_multiple_tajectories(cov_trajs):
     multi_trajs = [[np.array([1])], [np.array([2])]]
     for traj in multi_trajs:
-        cov_trajs.add_trajectories(traj)
+        cov_trajs.add(traj)
 
     correct = True
     for i in range(len(multi_trajs)):
@@ -38,12 +38,12 @@ def test_multiple_tajectories(cov_trajs):
 def test_coverage(cov_trajs):
     trajs = [np.array([1,2,3])]
     num_states = np.unique(trajs[0]).shape[0]
-    cov_trajs.add_trajectories(trajs)
+    cov_trajs.add(trajs)
     assert cov_trajs.num_covered_states == num_states
 
 
 def test_num_epochs(cov_trajs):
     multi_trajs = [[np.array([1])], [np.array([2])]]
     for traj in multi_trajs:
-        cov_trajs.add_trajectories(traj)
-    assert cov_trajs.num_epochs == 2
+        cov_trajs.add(traj)
+    assert cov_trajs.num_epochs == len(multi_trajs)
