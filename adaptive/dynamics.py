@@ -1,4 +1,4 @@
-from typing import List, Callable, Dict, Optional
+from typing import List, Callable, Dict, Optional, Set
 
 import pyemma as pm
 import numpy as np
@@ -26,31 +26,37 @@ class Dynamics(object):
         return trajs
 
 
-class Trajectory:
+class CoverTrajectories:
 
     def __init__(self) -> None:
-        self.trajectories = {}
-        self.covered_states = set()
-
-    def _append_trajectories(self, new_trajs: List[np.ndarray]) -> None:
-        num_epochs = len(self.trajectories)
-        self.trajectories[num_epochs + 1] = new_trajs
+        self._trajectories: List[List[np.ndarray]] = []
+        self._covered_states: Set[int] = set()
 
     def _update_state_coverage(self, new_trajs: List[np.ndarray]) -> None:
         unique_new_states = np.unique(np.concatenate(new_trajs))
-        self.covered_states.add(unique_new_states)
+        for x in unique_new_states:
+            self._covered_states.add(x)
 
     def add_trajectories(self, new_trajs: List[np.ndarray]) -> None:
-        self._append_trajectories(new_trajs)
+        self._trajectories.append(new_trajs)
         self._update_state_coverage(new_trajs)
 
     @property
     def num_covered_states(self) -> int:
-        return len(self.covered_states)
+        return len(self._covered_states)
+
+    @property
+    def trajectories(self) -> List[List[np.array]]:
+        return self._trajectories
 
 
-def single_matrix_cover(dynamics: Dynamics, policy: Callable, max_epochs: Optional[int]=int(1e3)) -> Trajectory:
-    trajectories = Trajectory()
+def time_to_cover(cov_traj: CoverTrajectories, n_states: int) -> int:
+    pass
+
+
+
+def single_matrix_cover(dynamics: Dynamics, policy: Callable, max_epochs: Optional[int]=int(1e3)) -> CoverTrajectories:
+    trajectories = CoverTrajectories()
     for i in range(max_epochs):
         config = policy(trajectories)
         new_trajectories = dynamics.sample(config)
