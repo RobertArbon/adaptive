@@ -1,3 +1,10 @@
+"""
+Tests whether the various trajectory contain classes - Walkers, Epochs, CoverageRuns,
+have:
+ 1. the correct number of items (walkers have steps, epochs have walkers, CoverageRuns
+epochs.
+ 2. accumulate the correct states
+"""
 from typing import List
 
 import pytest
@@ -6,44 +13,62 @@ import numpy as np
 import adaptive as ad
 
 
-@pytest.fixture
-def cov_trajs():
-    return ad.CoverTrajectories()
-
-
 def trajs_are_identical(a: List[np.ndarray], b: List[np.ndarray]):
     assert len(a) == len(b), 'traj lists are not same size'
     result = np.all([np.allclose(a[i], b[i]) for i in range(len(a))])
     return result
 
 
-def test_append_trajectory(cov_trajs):
-    trajs = [np.array([1])]
-    cov_trajs.add(new_trajs=trajs)
-    assert trajs_are_identical(cov_trajs.trajectories[0], trajs)
+@pytest.fixture
+def cov_trajs():
+    return ad.CoverageRun()
 
 
-def test_multiple_tajectories(cov_trajs):
-    multi_trajs = [[np.array([1])], [np.array([2])]]
-    for traj in multi_trajs:
-        cov_trajs.add(traj)
-
-    correct = True
-    for i in range(len(multi_trajs)):
-        added_traj = cov_trajs.trajectories[i]
-        correct = correct & trajs_are_identical(added_traj, multi_trajs[i])
-    assert correct
+@pytest.fixture
+def walker_and_traj():
+    traj = np.arange(3)[::-1]
+    walker = ad.Walker(traj)
+    return walker, traj
 
 
-def test_coverage(cov_trajs):
-    trajs = [np.array([1,2,3])]
-    num_states = np.unique(trajs[0]).shape[0]
-    cov_trajs.add(trajs)
-    assert cov_trajs.num_covered_states == num_states
+@pytest.fixture
+def epoch_and_walkers():
+    walkers = [ad.Walker(np.arange(3)) for _ in range(3)]
+    epoch = ad.Epoch(walkers)
+    return epoch, walkers
 
 
-def test_num_epochs(cov_trajs):
-    multi_trajs = [[np.array([1])], [np.array([2])]]
-    for traj in multi_trajs:
-        cov_trajs.add(traj)
-    assert cov_trajs.num_epochs == len(multi_trajs)
+def test_walker_steps(walker_and_traj):
+    walker, traj = walker_and_traj
+    assert walker.n_steps == traj.shape[0]
+
+
+def test_walker_states(walker_and_traj):
+    walker, traj = walker_and_traj
+    walker = ad.Walker(traj)
+    assert np.allclose(walker.states_visited, np.sort(np.unique(traj)))
+
+
+def test_epoch_walkers(epoch_and_walkers):
+    epoch, walkers = epoch_and_walkers
+    assert epoch.n_walkers == len(walkers)
+
+
+def test_epoch_states(epoch_and_walkers):
+    epoch, walkers = epoch_and_walkers
+    # walkers are all identical
+    assert np.allclose(epoch.states_visited, walkers[0].states_visited)
+
+
+def test_cov_run_epoch(cov_trajs):
+    traj = np.arange(3)
+    epoch = ad.Epoch([ad.Walker(traj)])
+    cov_trajs.add(epoch)
+    assert cov_trajs.n_epochs == 1
+
+
+def test_cov_run_states(cov_trajs):
+    traj = np.arange(3)
+    epoch = ad.Epoch([ad.Walker(traj)])
+    cov_trajs.add(epoch)
+    assert np.allclose(cov_trajs.states_visited, np.sort(traj))

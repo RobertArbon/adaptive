@@ -1,4 +1,5 @@
-from typing import List, Callable, Dict, Optional, Set
+
+from typing import List, Callable, Optional, Set, Iterable
 
 import pyemma as pm
 import numpy as np
@@ -22,10 +23,11 @@ class SamplingConfig:
         if (np.min(self.starting_states) < 0) or (np.max(self.starting_states)> n_states-1):
             raise ValueError(f'starting states must be between 0 and n_states ({n_states}).')
 
-    def is_valid(self, n_states) -> True:
+    def is_valid(self, n_states: Optional[int] = None) -> True:
         self._lengths_valid()
         self._lengths_states_consistent()
-        self._start_states_valid(n_states)
+        if n_states is not None:
+            self._start_states_valid(n_states)
         return True
 
 
@@ -70,12 +72,13 @@ class Dynamics(object):
         self.model: pm.msm.MSM = pm.msm.MSM(trans_mat)
         self.n_states: int = trans_mat.shape[0]
 
-    def sample(self, config: SamplingConfig) -> List[np.ndarray]:
+    def sample(self, config: SamplingConfig) -> Epoch:
         if config.is_valid(self.n_states):
             starting_states = config.starting_states
             traj_lengths = config.traj_lengths
-            trajs = [self.model.simulate(N=x, start=y) for x, y in zip(traj_lengths, starting_states)]
-            return trajs
+            trajs = [Walker(self.model.simulate(N=x, start=y)) for x, y in zip(traj_lengths, starting_states)]
+            epoch = Epoch(trajs)
+            return epoch
 
 
 class CoverageRun:
@@ -91,6 +94,7 @@ class CoverageRun:
     @property
     def states_visited(self) -> np.ndarray:
         states = np.concatenate([x.states_visited for x in self._epochs])
+        states = np.sort(np.unique(states))
         return states
 
     @property
@@ -104,6 +108,60 @@ class CoverageRun:
     @property
     def n_states_visited(self) -> int:
         return len(self.states_visited)
+
+
+def cover_time(cov_run: CoverageRun, required_coverage: int) -> int:
+    """ Calculates the number of steps to cover `num_states`
+
+    Parameters
+    ----------
+    cov_run : CoverageRun
+        The data from a single coverage run.
+    required_coverage : int
+        The required number of states to cover.
+
+    Returns
+    -------
+    int :
+        the cover time in number of steps.
+
+    Raises
+    ------
+    ValueError:
+        if the number of states is not covered.
+    """
+
+    cum_states = set()
+    n_states_per_epoch = np.empty(cov_run.n_epochs)
+    states_per_epoch = np.empty(cov_run.n_epochs)
+    for i, epoch in enumerate(cov_run.epochs):
+        states = set(epoch.states_visited)
+        cum_states = states.union(cum_states)
+
+        n_states_per_epoch[i] = len(cum_states)
+        states_per_epoch[i] = states
+
+    epoch_ix = np.min(np.where(n_states_per_epoch >= required_coverage)[0])
+
+    epoch = cov_run.epochs[epoch_ix]
+
+    walker_ixs = []
+    for i, walker in enumerate(epoch.walkers):
+        states = set(walker.states_visited)
+        if len(states_per_epoch[epoch_ix - 1].union(states)) >= required_coverage:
+            walker_ixs.append(i)
+
+
+
+     # epoch_ix = find_first_to_cover(cov_run)
+#     walker_ix = find_first_to_cover(cov_run.epochs[epoch_ix])
+#     step_ix = find_first_to_cover(cov_run.epochs[epoch_ix].walkers[walker_ix])
+#
+# def cum_unique_states(epochs: List[Epoch]) -> np.ndarray:
+#     cumulative_states = set()
+#     for epoch in epochs:
+#         states_visited = set(epoch.states_visited)
+#         cumulative_states = cumulative_states.union(states_visited)
 
 
 def single_matrix_cover(dynamics: Dynamics, policy: Callable, max_epochs: Optional[int]=int(1e3)) -> CoverageRun:
