@@ -1,8 +1,9 @@
-
 from typing import List, Callable, Optional, Set, Iterable
 
 import pyemma as pm
 import numpy as np
+
+from adaptive.containers import Walker, Epoch, CoverageRun
 
 
 class SamplingConfig:
@@ -31,41 +32,6 @@ class SamplingConfig:
         return True
 
 
-class Walker:
-    def __init__(self, trajectory: np.ndarray) -> None:
-        self.trajectory = trajectory
-
-    @property
-    def n_steps(self) -> int:
-        return self.trajectory.shape[0]
-
-    @property
-    def n_states_visited(self) -> int:
-        return len(self.states_visited)
-
-    @property
-    def states_visited(self) -> np.ndarray:
-        return np.sort(np.unique(self.trajectory))
-
-
-class Epoch:
-    def __init__(self, walkers: List[Walker]) -> None:
-        self.walkers = walkers
-
-    @property
-    def n_walkers(self) -> int:
-        return len(self.walkers)
-
-    @property
-    def states_visited(self) -> np.ndarray:
-        states = np.unique([x.states_visited for x in self.walkers])
-        return np.sort(states)
-
-    @property
-    def n_states_visited(self) -> int:
-        return self.states_visited.shape[0]
-
-
 class Dynamics(object):
 
     def __init__(self, trans_mat: np.ndarray) -> None:
@@ -79,35 +45,6 @@ class Dynamics(object):
             trajs = [Walker(self.model.simulate(N=x, start=y)) for x, y in zip(traj_lengths, starting_states)]
             epoch = Epoch(trajs)
             return epoch
-
-
-class CoverageRun:
-    """
-    Container of trajectories used to calculate cover time
-    """
-    def __init__(self) -> None:
-        self._epochs: List[Epoch] = []
-
-    def add(self, new_epoch: Epoch) -> None:
-        self._epochs.append(new_epoch)
-
-    @property
-    def states_visited(self) -> np.ndarray:
-        states = np.concatenate([x.states_visited for x in self._epochs])
-        states = np.sort(np.unique(states))
-        return states
-
-    @property
-    def epochs(self) -> List[Epoch]:
-        return self._epochs
-
-    @property
-    def n_epochs(self) -> int:
-        return len(self._epochs)
-
-    @property
-    def n_states_visited(self) -> int:
-        return len(self.states_visited)
 
 
 def cover_time(cov_run: CoverageRun, required_coverage: int) -> int:
