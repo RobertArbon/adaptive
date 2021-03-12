@@ -1,9 +1,10 @@
-import pytest
 import numpy as np
-from typing import NamedTuple, List
+from typing import NamedTuple
 
 from adaptive.containers import CoverageRun, Walker, Epoch
 from adaptive.statistics import cover_time
+
+np.random.seed(2039840)
 
 
 class FakeDatasetConfig(NamedTuple):
@@ -31,7 +32,7 @@ def create_random_training_set(config: FakeDatasetConfig) -> CoverageRun:
     return cov_run
 
 
-def trajs_with_ctime(config: FakeDatasetConfig, coords:DatasetCoordinates) -> (CoverageRun, int):
+def trajs_with_ctime(config: FakeDatasetConfig, coords: DatasetCoordinates) -> (CoverageRun, int):
     cov_run = create_random_training_set(config)
     epoch = cov_run.epochs[coords.epoch]
     walker = epoch.walkers[coords.walker]
@@ -40,19 +41,53 @@ def trajs_with_ctime(config: FakeDatasetConfig, coords:DatasetCoordinates) -> (C
     return cov_run, ctime
 
 
-def test_states_per_epoch_1():
+def random_coordinates(config: FakeDatasetConfig) -> DatasetCoordinates:
+
+    def rand_zero_to_n(n: int) -> int:
+        return int(np.random.choice(np.arange(n)))
+
+    coords = DatasetCoordinates(
+        epoch=rand_zero_to_n(config.n_epochs),
+        walker=rand_zero_to_n(config.n_walkers),
+        step=rand_zero_to_n(config.traj_length)
+    )
+    return coords
+
+
+# def test_states_per_epoch_1():
+#     config = FakeDatasetConfig(
+#         n_states=4,
+#         n_walkers=2,
+#         n_epochs=3,
+#         traj_length=5
+#     )
+#     coords = DatasetCoordinates(
+#         epoch=2,
+#         walker=1,
+#         step=3
+#     )
+#     cov_run, ctime = trajs_with_ctime(config, coords)
+#     a = cover_time(cov_run, config.n_states)
+#
+#     assert a == ctime
+
+
+def test_ctime_random_1():
     config = FakeDatasetConfig(
         n_states=4,
         n_walkers=2,
         n_epochs=3,
         traj_length=5
     )
-    coords = DatasetCoordinates(
-        epoch=2,
-        walker=1,
-        step=3
-    )
-    cov_run, ctime = trajs_with_ctime(config, coords)
-    a = cover_time(cov_run, config.n_states)
-
-    assert a == ctime
+    test = []
+    n_tests = 100
+    for _ in range(n_tests):
+        coords = random_coordinates(config)
+        cov_run, ctime = trajs_with_ctime(config, coords)
+        a = cover_time(cov_run, config.n_states)
+        is_equal = a == ctime
+        # if not is_equal:
+        #     print(cov_run)
+        #     print(a, ctime)
+        test.append(is_equal)
+    assert np.sum(np.array(test)) == n_tests
