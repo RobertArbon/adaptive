@@ -1,10 +1,11 @@
+from typing import List, Optional
+
 import numpy as np
-from typing import List
 
 
 class Walker:
     def __init__(self, trajectory: np.ndarray) -> None:
-        self.trajectory = trajectory
+        self._trajectory = trajectory
 
     @property
     def n_steps(self) -> int:
@@ -18,23 +19,60 @@ class Walker:
     def states_visited(self) -> np.ndarray:
         return np.sort(np.unique(self.trajectory))
 
+    @property
+    def trajectory(self) -> np.ndarray:
+        return self._trajectory
+
 
 class Epoch:
-    def __init__(self, walkers: List[Walker]) -> None:
-        self.walkers = walkers
+    def __init__(self, walkers: Optional[List[Walker]] = None) -> None:
+        self._walkers = walkers
+
+    @property
+    def n_steps(self) -> int:
+        if self.has_walkers():
+            return int(np.max([x.n_steps for x in self._walkers]))
 
     @property
     def n_walkers(self) -> int:
-        return len(self.walkers)
+        if self._walkers is not None:
+            return len(self.walkers)
+        else:
+            return 0
+
+    def has_walkers(self):
+        if self._walkers is not None:
+            return True
+        else:
+            raise ValueError('No walkers in this epoch')
 
     @property
     def states_visited(self) -> np.ndarray:
-        states = np.unique([x.states_visited for x in self.walkers])
-        return np.sort(states)
+        if self.has_walkers():
+            states = np.unique(np.concatenate([x.states_visited for x in self.walkers]))
+            return np.sort(states)
 
     @property
     def n_states_visited(self) -> int:
         return self.states_visited.shape[0]
+
+    @property
+    def walkers(self) -> List[Walker]:
+        if self.has_walkers():
+            return self._walkers
+
+    def add(self, walker: Walker) -> None:
+        if self._walkers is None:
+            self._walkers = [walker]
+        else:
+            self._walkers.append(walker)
+
+    # @walkers.setter
+    # def walkers(self, walkers: List[Walker]) -> None:
+    #     if self.walkers is not None:
+    #         self._walkers = walkers
+    #     else:
+    #         raise ValueError(f"walkers property already set")
 
 
 class CoverageRun:
@@ -64,3 +102,12 @@ class CoverageRun:
     @property
     def n_states_visited(self) -> int:
         return len(self.states_visited)
+
+    def __str__(self):
+        msg = "\n"
+        for epoch in self.epochs:
+            msg += '='*80 + '\n'
+            for walker in epoch.walkers:
+                msg += '-'*80 + '\n'
+                msg += f"{walker.trajectory}\n"
+        return msg
