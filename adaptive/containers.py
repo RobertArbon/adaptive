@@ -23,6 +23,9 @@ class Walker:
     def trajectory(self) -> np.ndarray:
         return self._trajectory
 
+    def __str__(self):
+        return np.array2string(self._trajectory)
+
 
 class Epoch:
     def __init__(self, walkers: Optional[List[Walker]] = None) -> None:
@@ -55,6 +58,17 @@ class Epoch:
     @property
     def n_states_visited(self) -> int:
         return self.states_visited.shape[0]
+
+    def walkers_same_length(self):
+        lengths = np.array([x.n_steps for x in self.walkers])
+        return np.all(lengths == self.n_steps)
+
+    @property
+    def walkers_as_array(self) -> np.ndarray:
+        if not self.walkers_same_length():
+            raise NotImplementedError('Walkers need to be the same length.')
+        array = np.concatenate([x.trajectory.reshape(-1, 1) for x in self.walkers], axis=1)
+        return array
 
     @property
     def walkers(self) -> List[Walker]:
@@ -108,6 +122,5 @@ class CoverageRun:
         for epoch in self.epochs:
             msg += '='*80 + '\n'
             for walker in epoch.walkers:
-                msg += '-'*80 + '\n'
-                msg += f"{walker.trajectory}\n"
+                msg += f"{walker}\n"
         return msg

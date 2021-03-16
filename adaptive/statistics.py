@@ -5,22 +5,42 @@ import numpy as np
 from adaptive.containers import Epoch, Walker, CoverageRun
 
 
-def states_at_epoch(cov_run: CoverageRun) -> List[Set]:
+def cum_states_at_epoch_start(cov_run: CoverageRun) -> List[Set]:
+    # Includes last epoch so array is n_epochs + 1 long
     cum_states = set()
-    result = []
-    for epoch in cov_run.epochs:
+    result = [set()]
+    for i in range(cov_run.n_epochs):
+        epoch = cov_run.epochs[i]
         cum_states = cum_states.union(set(epoch.states_visited))
         result.append(cum_states)
     return result
 
 
-def find_cover_indices(arr: List[int], target: int) -> np.ndarray:
-    return np.where(arr >= target)[0]
+def cum_steps_at_epoch_start(cov_run: CoverageRun) -> np.ndarray:
+    # Includes last epoch so array is n_epochs + 1 long
+    result = [0]
+    for i in range(cov_run.n_epochs):
+        epoch = cov_run.epochs[i]
+        result.append(epoch.n_steps)
+    result = np.cumsum(np.array(result))
+    return result
 
+
+def cum_n_states_at_epoch_start(cov_run: CoverageRun) -> np.ndarray:
+    cumulative_state_covered = cum_states_at_epoch_start(cov_run)
+    result = np.array([len(x) for x in cumulative_state_covered])
+    return result
+
+
+def find_epoch_which_covers(cov_run: CoverageRun, required_coverage: int) -> (int, Epoch):
+    cumulative_n_states_covered = cum_n_states_at_epoch_start(cov_run)
+    epoch_ix = np.min(np.where(cumulative_n_states_covered >= required_coverage)[0]) - 1
+    epoch = cov_run.epochs[epoch_ix]
+    return epoch_ix, epoch
 
 
 def cover_time(cov_run: CoverageRun, required_coverage: int) -> int:
-    """ Calculates the number of steps to cover `num_states`
+    """ Calculates the number of steps to cover `required_coverage` number of states.
 
     Parameters
     ----------
@@ -39,32 +59,20 @@ def cover_time(cov_run: CoverageRun, required_coverage: int) -> int:
     ValueError:
         if the number of states is not covered.
     """
-    cumulative_state_covered = states_at_epoch(cov_run)
-    cumulative_n_states_covered = np.array([len(x) for x in cumulative_state_covered])
+    cumulative_state_covered = cum_states_at_epoch_start(cov_run)
+    cumulative_steps = cum_steps_at_epoch_start(cov_run)
 
-    epoch_ix = np.min(np.where(cumulative_n_states_covered >= required_coverage)[0])
+    epoch_ix, epoch = find_epoch_which_covers(cov_run, required_coverage)
 
-    epoch = cov_run.epochs[epoch_ix]
+    all_walkers = epoch.walkers_as_array
+    covered_states = cumulative_state_covered[epoch_ix]
+    for step in range(epoch.n_steps):
+        covered_states = covered_states.union(set(all_walkers[step, :]))
+        if len(covered_states) == required_coverage:
+            cover_step = step
+            break
 
-    good_walkers = []
-    for i, walker in enumerate(epoch.walkers):
-        states = set(walker.states_visited)
-        if len(cum_states_per_epoch[epoch_ix - 1].union(states)) >= required_coverage:
-            good_walkers.append(walker)
-
-    good_steps = np.empty(len(good_walkers))
-    for i, walker in enumerate(good_walkers):
-        cum_states = cum_states_per_epoch[epoch_ix-1]
-        for step, state in enumerate(walker.trajectory):
-            cum_states.add(state)
-            if len(cum_states) == required_coverage:
-                good_steps[i] = step
-                break
-
-    first_step = np.min(good_steps)
-    n_steps_per_epoch = np.array([x.n_steps for x in cov_run.epochs])
-    cum_steps_per_epoch = np.cumsum(n_steps_per_epoch)
-    ctime = int(cum_steps_per_epoch[epoch_ix-1] + first_step) + 1
+    ctime = int(cumulative_steps[epoch_ix] + cover_step) + 1
     return ctime
 
 
