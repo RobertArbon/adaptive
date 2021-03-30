@@ -3,7 +3,7 @@ import numpy as np
 from adaptive.adaptive import *
 from adaptive.dynamics import Dynamics
 from adaptive.policies import naive_walkers
-from adaptive.statistics import cover_time
+from adaptive.statistics import cover_times
 from .utils import is_equivalent
 
 t_01 = 0.4
@@ -36,8 +36,7 @@ def test_single_matrix_cover():
 
 def test_run_experiment_ctimes():
     results = run_experiment(experiment)
-    ctimes = np.array([cover_time(cov_run, experiment.dynamics.n_states) for
-              cov_run in results])
+    ctimes = cover_times(results, required_coverage=2)
 
     assert is_equivalent(sample=ctimes, target=MEAN_CTIME,
                          window=1)

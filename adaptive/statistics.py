@@ -39,6 +39,28 @@ def find_epoch_which_covers(cov_run: CoverageRun, required_coverage: int) -> (in
     return epoch_ix, epoch
 
 
+def cover_times(cov_runs: List[CoverageRun], required_coverage: int) -> np.ndarray:
+    """ Convenience function. Runs cover_time over a list of coverage runs
+
+    Parameters
+    ----------
+    cov_runs : List[CoverageRun]
+        the output from run_experiment
+    required_coverage : int
+        number of states to be considered covered.
+
+    Returns
+    -------
+    np.ndarray
+        the cover times.
+    """
+    ctimes = np.empty(len(cov_runs))
+    for i, cov_run in enumerate(cov_runs):
+        ctimes[i] = cover_time(cov_run, required_coverage)
+    return ctimes
+
+
+
 def cover_time(cov_run: CoverageRun, required_coverage: int) -> int:
     """ Calculates the number of steps to cover `required_coverage` number of states.
 
