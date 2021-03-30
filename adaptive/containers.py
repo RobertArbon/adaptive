@@ -1,6 +1,9 @@
-from typing import List, Optional
+from typing import List, Optional, NamedTuple
 
 import numpy as np
+
+
+
 
 
 class Walker:
@@ -116,6 +119,10 @@ class CoverageRun:
     @property
     def n_states_visited(self) -> int:
         return len(self.states_visited)
+
+    @property
+    def trajectories(self) -> List[np.ndarray]:
+        return [walker.trajectory for epoch in self.epochs for walker in epoch.walkers]
 
     def __str__(self):
         msg = "\n"

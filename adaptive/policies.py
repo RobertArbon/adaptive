@@ -25,27 +25,25 @@ class SampledSystemStatistics:
         return inv_counts/np.sum(inv_counts)
 
 
-def inverse_microcounts(cov_run: CoverageRun, init_config: SamplingConfig) -> SamplingConfig:
+def inverse_microcounts(cov_run: CoverageRun)  -> SamplingConfig:
     if cov_run.n_epochs == 0:
-        return init_config
-    else:
-        stats = SampledSystemStatistics(cov_run)
-        n_walkers = cov_run.epochs[-1].n_walkers
-        traj_length = cov_run.epochs[-1].n_steps
+        raise ValueError('Policies require data')
+    stats = SampledSystemStatistics(cov_run)
+    n_walkers = cov_run.epochs[-1].n_walkers
+    traj_length = cov_run.epochs[-1].n_steps
 
-        starting_states = np.random.choice(stats.states, p=stats.inv_count_probability,
-                                           replace=True, size=n_walkers)
-        traj_lengths = np.repeat(traj_length, repeats=n_walkers)
+    starting_states = np.random.choice(stats.states, p=stats.inv_count_probability,
+                                       replace=True, size=n_walkers)
+    traj_lengths = np.repeat(traj_length, repeats=n_walkers)
 
-        return SamplingConfig(starting_states=starting_states,
-                              traj_lengths=traj_lengths)
+    return SamplingConfig(starting_states=starting_states,
+                          traj_lengths=traj_lengths)
 
 
-def naive_walkers(cov_run: CoverageRun, init_config: SamplingConfig) -> SamplingConfig:
+def naive_walkers(cov_run: CoverageRun) -> SamplingConfig:
     if cov_run.n_epochs == 0:
-        return init_config
-    else:
-        starting_states = np.array([walker.trajectory[-1] for walker in cov_run.epochs[-1].walkers])
-        traj_lengths = np.array([walker.trajectory.shape[0] for walker in cov_run.epochs[-1].walkers])
-        return SamplingConfig(starting_states=starting_states,
-                              traj_lengths=traj_lengths)
+        raise ValueError('Policies require data')
+    starting_states = np.array([walker.trajectory[-1] for walker in cov_run.epochs[-1].walkers])
+    traj_lengths = np.array([walker.trajectory.shape[0] for walker in cov_run.epochs[-1].walkers])
+    return SamplingConfig(starting_states=starting_states,
+                          traj_lengths=traj_lengths)

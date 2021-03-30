@@ -1,16 +1,34 @@
-from typing import Callable, Optional
+from typing import Callable, Optional, NamedTuple, List
 
 import numpy as np
+from adaptive.containers import CoverageRun
+from adaptive.dynamics import Dynamics, SamplingConfig
 
-from adaptive.dynamics import Dynamics
+
+class Experiment(NamedTuple):
+    name: str
+    dynamics: Dynamics
+    init_config: SamplingConfig
+    policy: Callable
+    n_runs: int
+    max_epochs: int = int(1e3)
 
 
-def single_matrix_cover(dynamics: Dynamics, policy: Callable, max_epochs: Optional[int]=int(1e3)) -> CoverageRun:
-    trajectories = CoverageRun()
-    for i in range(max_epochs):
-        config = policy(trajectories)
-        new_trajectories = dynamics.sample(config)
-        trajectories.add(new_trajectories)
-        if trajectories.num_covered_states == dynamics.n_states:
-            return trajectories
+def run_experiment(experiment: Experiment) -> List[CoverageRun]:
+    results = []
+    for i in range(experiment.n_runs):
+        results.append(single_matrix_cover(experiment))
+    return results
+
+
+def single_matrix_cover(experiment: Experiment) -> CoverageRun:
+    cov_run = CoverageRun()
+    epoch = experiment.dynamics.sample(experiment.init_config)
+    cov_run.add(epoch)
+    for i in range(experiment.max_epochs):
+        config = experiment.policy(cov_run)
+        epoch = experiment.dynamics.sample(config)
+        cov_run.add(epoch)
+        if cov_run.n_states_visited == experiment.dynamics.n_states:
+            return cov_run
 
