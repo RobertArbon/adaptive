@@ -1,6 +1,9 @@
 from typing import Callable, Optional, NamedTuple, List
+from multiprocessing import Pool, cpu_count
+from rich.progress import Progress
 
 import numpy as np
+
 from adaptive.containers import CoverageRun
 from adaptive.dynamics import Dynamics, SamplingConfig
 
@@ -15,9 +18,16 @@ class Experiment(NamedTuple):
 
 
 def run_experiment(experiment: Experiment) -> List[CoverageRun]:
+    n_workers = cpu_count() - 1
+    args = [experiment]*experiment.n_runs
     results = []
-    for i in range(experiment.n_runs):
-        results.append(single_matrix_cover(experiment))
+    with Pool(n_workers) as pool:
+        with Progress() as progress:
+            task = progress.add_task(f'[green] Running experiment {experiment.name}',
+                                     total=experiment.n_runs)
+            for i, result in enumerate(pool.imap_unordered(single_matrix_cover, args)):
+                progress.update(task, advance=1)
+                results.append(result)
     return results
 
 

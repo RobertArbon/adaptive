@@ -37,7 +37,6 @@ def test_single_matrix_cover():
 def test_run_experiment_ctimes():
     results = run_experiment(experiment)
     ctimes = cover_times(results, required_coverage=2)
-
     assert is_equivalent(sample=ctimes, target=MEAN_CTIME,
                          window=1)
 
