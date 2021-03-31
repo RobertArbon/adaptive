@@ -1,4 +1,5 @@
 from typing import Callable, Optional, List, Set
+import warnings
 
 import numpy as np
 
@@ -34,9 +35,13 @@ def cum_n_states_at_epoch_start(cov_run: CoverageRun) -> np.ndarray:
 
 def find_epoch_which_covers(cov_run: CoverageRun, required_coverage: int) -> (int, Epoch):
     cumulative_n_states_covered = cum_n_states_at_epoch_start(cov_run)
-    epoch_ix = np.min(np.where(cumulative_n_states_covered >= required_coverage)[0]) - 1
-    epoch = cov_run.epochs[epoch_ix]
-    return epoch_ix, epoch
+    if np.max(cumulative_n_states_covered) < required_coverage:
+        warnings.warn('Graph not covered')
+        return None, None
+    else:
+        epoch_ix = np.min(np.where(cumulative_n_states_covered >= required_coverage)[0]) - 1
+        epoch = cov_run.epochs[epoch_ix]
+        return epoch_ix, epoch
 
 
 def cover_times(cov_runs: List[CoverageRun], required_coverage: int) -> np.ndarray:
@@ -58,7 +63,6 @@ def cover_times(cov_runs: List[CoverageRun], required_coverage: int) -> np.ndarr
     for i, cov_run in enumerate(cov_runs):
         ctimes[i] = cover_time(cov_run, required_coverage)
     return ctimes
-
 
 
 def cover_time(cov_run: CoverageRun, required_coverage: int) -> int:
@@ -85,16 +89,17 @@ def cover_time(cov_run: CoverageRun, required_coverage: int) -> int:
     cumulative_steps = cum_steps_at_epoch_start(cov_run)
 
     epoch_ix, epoch = find_epoch_which_covers(cov_run, required_coverage)
-
-    all_walkers = epoch.walkers_as_array
-    covered_states = cumulative_state_covered[epoch_ix]
-    for step in range(epoch.n_steps):
-        covered_states = covered_states.union(set(all_walkers[step, :]))
-        if len(covered_states) == required_coverage:
-            cover_step = step
-            break
-
-    ctime = int(cumulative_steps[epoch_ix] + cover_step) + 1
+    if epoch_ix is None:
+        return -1
+    else:
+        all_walkers = epoch.walkers_as_array
+        covered_states = cumulative_state_covered[epoch_ix]
+        for step in range(epoch.n_steps):
+            covered_states = covered_states.union(set(all_walkers[step, :]))
+            if len(covered_states) == required_coverage:
+                cover_step = step
+                break
+        ctime = int(cumulative_steps[epoch_ix] + cover_step) + 1
     return ctime
 
 

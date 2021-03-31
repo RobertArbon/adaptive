@@ -17,17 +17,15 @@ class Experiment(NamedTuple):
     max_epochs: int = int(1e3)
 
 
+# with Progress() as progress:
+#     task = progress.add_task(f'[green] Running experiment {experiment.name}',
+#                              total=experiment.n_runs)
+
 def run_experiment(experiment: Experiment) -> List[CoverageRun]:
     n_workers = cpu_count() - 1
     args = [experiment]*experiment.n_runs
-    results = []
     with Pool(n_workers) as pool:
-        with Progress() as progress:
-            task = progress.add_task(f'[green] Running experiment {experiment.name}',
-                                     total=experiment.n_runs)
-            for i, result in enumerate(pool.imap_unordered(single_matrix_cover, args)):
-                progress.update(task, advance=1)
-                results.append(result)
+        results = list(pool.imap_unordered(single_matrix_cover, args))
     return results
 
 
@@ -40,5 +38,5 @@ def single_matrix_cover(experiment: Experiment) -> CoverageRun:
         epoch = experiment.dynamics.sample(config)
         cov_run.add(epoch)
         if cov_run.n_states_visited == experiment.dynamics.n_states:
-            return cov_run
-
+            break
+    return cov_run

@@ -25,7 +25,7 @@ class SampledSystemStatistics:
         return inv_counts/np.sum(inv_counts)
 
 
-def inverse_microcounts(cov_run: CoverageRun)  -> SamplingConfig:
+def inverse_microcounts(cov_run: CoverageRun) -> SamplingConfig:
     if cov_run.n_epochs == 0:
         raise ValueError('Policies require data')
     stats = SampledSystemStatistics(cov_run)

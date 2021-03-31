@@ -4,7 +4,10 @@ A package for prototyping adaptive sampling policies for molecular kinetics
 """
 
 # Add imports here
-from .dynamics import *
+from .dynamics import SamplingConfig, Dynamics
+from .adaptive import Experiment, single_matrix_cover, run_experiment
+from .policies import inverse_microcounts, naive_walkers
+from .statistics import cover_times
 
 # Handle versioneer
 from ._version import get_versions
