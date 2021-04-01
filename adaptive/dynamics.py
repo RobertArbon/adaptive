@@ -32,17 +32,29 @@ class SamplingConfig:
         return True
 
 
+def simulate(T, N, start):
+    traj = np.empty(N, dtype=int)
+    states = np.arange(T.shape[0])
+    traj[0] = start
+    rng = np.random.default_rng()
+    for i in range(1, N):
+        traj[i] = rng.choice(states, p=T[traj[i-1], :], size=1, replace=True)
+    return traj
+
+
 class Dynamics(object):
 
     def __init__(self, trans_mat: np.ndarray) -> None:
         self.model: pm.msm.MSM = pm.msm.MSM(trans_mat)
         self.n_states: int = trans_mat.shape[0]
+        self.trans_mat = trans_mat
 
     def sample(self, config: SamplingConfig) -> Epoch:
         if config.is_valid(self.n_states):
             starting_states = config.starting_states
             traj_lengths = config.traj_lengths
             trajs = [Walker(self.model.simulate(N=x, start=y)) for x, y in zip(traj_lengths, starting_states)]
+            trajs = [Walker(simulate(self.trans_mat, N=x, start=y)) for x, y in zip(traj_lengths, starting_states)]
             epoch = Epoch(trajs)
             return epoch
 

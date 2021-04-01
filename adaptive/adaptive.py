@@ -1,6 +1,5 @@
 from typing import Callable, Optional, NamedTuple, List
 from multiprocessing import Pool, cpu_count
-from rich.progress import Progress
 
 import numpy as np
 
@@ -17,15 +16,17 @@ class Experiment(NamedTuple):
     max_epochs: int = int(1e3)
 
 
-# with Progress() as progress:
-#     task = progress.add_task(f'[green] Running experiment {experiment.name}',
-#                              total=experiment.n_runs)
+def run_trial(trial: List[Experiment]) -> List[List[CoverageRun]]:
+    n_workers = cpu_count() - 1
+    with Pool(n_workers) as pool:
+        results = list(pool.map(run_experiment, trial))
+    return results
+
 
 def run_experiment(experiment: Experiment) -> List[CoverageRun]:
-    n_workers = cpu_count() - 1
-    args = [experiment]*experiment.n_runs
-    with Pool(n_workers) as pool:
-        results = list(pool.imap_unordered(single_matrix_cover, args))
+    results = []
+    for i in range(experiment.n_runs):
+        results.append(single_matrix_cover(experiment))
     return results
 
 
