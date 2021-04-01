@@ -1,4 +1,5 @@
 import numpy as np
+import pyemma as pm
 
 from adaptive.containers import CoverageRun
 from adaptive.dynamics import SamplingConfig
@@ -23,6 +24,37 @@ class SampledSystemStatistics:
     def inv_count_probability(self) -> np.ndarray:
         inv_counts = 1.0/self.counts
         return inv_counts/np.sum(inv_counts)
+
+
+def estimate_model(trajectories: List[np.ndarray], **kwargs) -> pm.msm.MaximumLikelihoodMSM:
+    pass
+
+def get_good_eigenvalues(model: pm.msm.MaximumLikelihoodMSM) -> np.ndarray:
+    pass
+
+def determine_n_metastable(eigenvalues: np.ndarray) -> int:
+    pass
+
+def stationary_ditributions(model: pm.msm.MaximumLikelihoodMSM, n_metastable: int) -> (np.ndarray, np.ndarray):
+    pass
+
+def hierarchical_sample(distributions: Tuple[np.ndarray], size=int) -> List[int]:
+    pass
+
+
+def inverse_macrocount(cov_run: CoverageRun, **kwargs) -> SamplingConfig:
+    # model = estimate_model(cov_run.trajectories, **kwargs)
+    # eigenvalues = get_good_eigenvalues(model)
+    # if eigenvalues is None:
+    #     return inverse_microcounts(cov_run)
+    # else:
+    #     n_walkers = cov_run.epochs[-1].n_walkers
+    #     traj_length = cov_run.epochs[-1].n_steps
+    #     n_metastable = determine_n_metastable(eigenvalues)
+    #     (macro_stat_dist, micro_stat_dist) = stationary_distributions(model, n_metastable)
+    #     micro_ix = hierarchical_sample((macro_stat_dist, micro_stat_dist), size=n_walkers)
+    pass
+
 
 
 def inverse_microcounts(cov_run: CoverageRun) -> SamplingConfig:
