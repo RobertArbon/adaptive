@@ -1,4 +1,5 @@
 from typing import List, Tuple, Optional, Union
+
 import numpy as np
 import pyemma as pm
 
@@ -10,18 +11,35 @@ ZERO = 1E-8
 METASTABLE_THRESHOLD = 1.5
 
 
-class StationaryDistributions:
-    def __init__(self, micro: np.ndarray, macro: np.ndarray) -> None:
-        self._micro = micro
-        self._macro = macro
+class Clustering:
+    def __init__(self, model: pm.msm.MaximumLikelihoodMSM) -> None:
+        self._model = model
+        self._memberships = model.metastable_memberships
+        self._distributions = model.metastable_distributions
+        self._stationary_distribution = model.stationary_distribution
+        self._macrostates = np.arange(self._memberships.shape[1])
+        self._microstates = np.arange(self._memberships.shape[0])
 
     @property
-    def micro(self) -> np.ndarray:
-        return self._micro
+    def micro_stationary_distribution(self) -> np.ndarray:
+        return self._model.stationary_distribution
 
     @property
-    def macro(self) -> np.ndarray:
-        return self._macro
+    def macro_stationary_distribution(self) -> np.ndarray:
+        macro = np.dot(self._memberships, self._stationary_distribution)
+        return macro
+
+    def micro_memberships(self, microstate: int) -> np.ndarray:
+        return self._memberships[microstate, :]
+
+    def macro_distribution(self, macrostate: int) -> np.ndarray:
+        return self._distributions[macrostate, :]
+
+    def sample_macro(self) -> int:
+        return np.random.choice(self._macrostates, p=self.macro_stationary_distribution)
+
+    def sample_micro_from_macro(self, macro_state: int) -> int:
+        return np.random.choice(self._microstates, p=self.macro_distribution(macro_state))
 
 
 class SampledSystemStatistics:
@@ -75,30 +93,18 @@ def determine_n_metastable(eigenvalues: np.ndarray) -> int:
         return np.argmax(ratios) + 1
 
 
-def macro_stationary_distribution(model: pm.msm.MaximumLikelihoodMSM) -> np.ndarray:
-    pi = np.empty(model.n_metastable)
-    for i in range(model.n_metastable):
-        pi[i] = np.sum(model.stationary_distribution[model.metastable_assignments == i])
-    return pi
-
-
-def stationary_ditributions(model: pm.msm.MaximumLikelihoodMSM, n_metastable: int) -> StationaryDistributions:
+def cluster_model(model: pm.msm.MaximumLikelihoodMSM, n_metastable: int) -> Clustering:
     model.pcca(n_metastable)
-    macro_dist = macro_stationary_distribution(model)
-    micro_dist = model.stationary_distribution
-    dists = StationaryDistributions(micro_dist, macro_dist)
-    return dists
+    pcca = Clustering(model)
+    return pcca
 
 
-def hierarchical_sample(distributions: StationaryDistributions, size=int) -> np.ndarray:
-    sample = np.zeros(size, dtype=int)
-    macro_states = distributions.macro.shape[0]
-    micro_states = distributions.micro.shape[0]
-    macro_ixs = np.random.choice(macro_states, p=distributions.macro, size=size)
+def hierarchical_sample(clusters: Clustering, size: int) -> np.ndarray:
+    samples = np.zeros(size, dtype=int)
     for i in range(size):
-        sample[i] = np.random.choice()
-    pass
-
+        macro_state = clusters.sample_macro()
+        samples[i] = clusters.sample_micro_from_macro(macro_state=macro_state)
+    return samples
 
 
 def inverse_macrocount(cov_run: CoverageRun, **kwargs) -> SamplingConfig:
